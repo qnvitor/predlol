@@ -1,0 +1,66 @@
+# Veja https://help.github.com/articles/ignoring-files/ para mais informações sobre ignorar arquivos.
+
+# dependências do Node
+frontend/node_modules
+/.pnp
+.pnp.js
+
+# dependências do Python (venv)
+backend/venv/
+__pycache__/
+
+# arquivos do Python
+*.pyc
+*.pyo
+*.pyd
+*.db
+
+# Flask e Python
+instance/
+.pytest_cache/
+
+# logs
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# build
+/build
+/dist
+
+# arquivos .env (sensíveis)
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# arquivos temporários do sistema
+.DS_Store
+Thumbs.db
+
+# coverage de testes
+/coverage
+
+# output de relatórios
+*.lcov
+
+# relatórios de testes
+junit.xml
+coverage-final.json
+
+# Tailwind generated files
+*.css.map
+*.tmp.css
+tailwind.output.css
+tailwind.css
+ 
+# PostCSS cache
+.postcss-cache/
+ 
+ 
+# arquivos do Vite, Next
+.next/
+out/
+.vite/
