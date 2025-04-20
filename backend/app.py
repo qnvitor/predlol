@@ -31,8 +31,18 @@ roles = ['ADCARRY', 'JUNGLE', 'MID', 'SUPPORT', 'TOP']
 
 @app.route("/options", methods=["GET"])
 def get_options():
-    champions = sorted(champions_col.distinct("name"))
-    return jsonify({"roles": roles, "champions": champions})
+    roles = ['ADCARRY', 'JUNGLE', 'MID', 'SUPPORT', 'TOP']
+    champions_by_role = {role: [] for role in roles}
+
+    for champ in champions_col.find():
+        for role in champ.get('roles', []):
+            if role in champions_by_role:
+                champions_by_role[role].append(champ['name'])
+
+    return jsonify({
+        "roles": roles,
+        "champions_by_role": champions_by_role
+    })
 
 @app.route("/predict", methods=["POST"])
 def predict():
@@ -40,6 +50,16 @@ def predict():
         data = request.json
         blue = data.get('blue', {})
         red = data.get('red', {})
+
+        # Verificar campeões repetidos entre os dois lados
+        champs_blue = list(blue.values())
+        champs_red = list(red.values())
+        repeated = set(champs_blue) & set(champs_red)
+        if repeated:
+            return jsonify({
+                "error": f"Campeões repetidos entre os lados: {', '.join(repeated)}"
+            }), 400
+
 
         if len(blue) != 5 or len(red) != 5:
             return jsonify({"error": "Preencha todos os 5 picks de cada lado."}), 400

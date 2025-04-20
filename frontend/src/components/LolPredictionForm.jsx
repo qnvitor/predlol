@@ -1,28 +1,27 @@
 import React, { useState, useEffect } from "react";
 
-const RoleSelector = ({ side, role, champions, onChange, selectedChamps }) => (
-  <div className="mb-2">
-    <label className="block text-sm font-medium mb-1">{role} - {side}</label>
-    <select
-      className="w-full border rounded p-2"
-      onChange={(e) => onChange(role, e.target.value)}
-    >
-      <option value="">Escolha um campeão</option>
-      {champions.map((champ) => {
-        const isSelected = selectedChamps.includes(champ);
-        return (
-          <option key={champ} value={champ} className={isSelected ? "text-gray-400" : ""}>
-            {champ} {isSelected ? "(já escolhido)" : ""}
-          </option>
-        );
-      })}
-    </select>
-  </div>
-);
+const RoleSelector = ({ side, role, champions, onChange, selectedChamps, selectedChampion }) => {
+  const availableChamps = champions.filter(c => !selectedChamps.includes(c) || c === selectedChampion);
+  return (
+    <div className="mb-2">
+      <label className="block text-sm font-medium mb-1">{role} - {side}</label>
+      <select
+        className="w-full border rounded p-2"
+        value={selectedChampion || ""}
+        onChange={(e) => onChange(role, e.target.value)}
+      >
+        <option value="">Escolha um campeão</option>
+        {availableChamps.map((champ) => (
+          <option key={champ} value={champ}>{champ}</option>
+        ))}
+      </select>
+    </div>
+  );
+};
 
 export default function LolPredictionForm() {
   const [roles, setRoles] = useState([]);
-  const [champions, setChampions] = useState([]);
+  const [championsByRole, setChampionsByRole] = useState({});
   const [blueTeam, setBlueTeam] = useState({});
   const [redTeam, setRedTeam] = useState({});
   const [prediction, setPrediction] = useState(null);
@@ -30,7 +29,6 @@ export default function LolPredictionForm() {
 
   const API_URL = import.meta.env.VITE_API_URL;
 
-  // Exibição bonita (UI) => Interno (modelo)
   const roleMap = {
     "Top": "TOP",
     "Jungle": "JUNGLE",
@@ -39,7 +37,6 @@ export default function LolPredictionForm() {
     "Support": "SUPPORT"
   };
 
-  // Ordem exigida pelo modelo
   const modelRoleOrder = ["ADCARRY", "JUNGLE", "MID", "SUPPORT", "TOP"];
 
   useEffect(() => {
@@ -47,7 +44,7 @@ export default function LolPredictionForm() {
     fetch(`${API_URL}/options`)
       .then(res => res.json())
       .then(data => {
-        setChampions(data.champions);
+        setChampionsByRole(data.champions_by_role || {});
       });
   }, []);
 
@@ -73,17 +70,15 @@ export default function LolPredictionForm() {
       alert("Preencha todos os picks dos dois times.");
       return;
     }
-  
+
     const orderedBlueTeam = {};
     const orderedRedTeam = {};
     modelRoleOrder.forEach((role) => {
       orderedBlueTeam[role] = blueTeam[role];
       orderedRedTeam[role] = redTeam[role];
     });
-  
+
     const payload = { blue: orderedBlueTeam, red: orderedRedTeam };
-    console.log("Payload enviado ao backend:", payload);
-  
     setLoading(true);
     try {
       const response = await fetch(`${API_URL}/predict`, {
@@ -91,36 +86,36 @@ export default function LolPredictionForm() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
-  
+
       const data = await response.json();
-  
       if (response.ok) {
         setPrediction(`${data.result} (Blue: ${Math.round(data.probability_blue * 100)}%, Red: ${Math.round(data.probability_red * 100)}%)`);
       } else {
         setPrediction(`Erro do servidor: ${data.error}`);
-        console.error("Erro do backend:", data.error);
       }
     } catch (error) {
-      console.error("Erro ao obter previsão:", error);
       setPrediction("Erro ao conectar ao servidor.");
     } finally {
       setLoading(false);
     }
-  };  
+  };
+
+  const selectedChamps = [...Object.values(blueTeam), ...Object.values(redTeam)];
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-6">
       <div>
         <h2 className="text-xl font-semibold mb-4">Time Azul</h2>
-          {roles.map((role) => (
+        {roles.map((uiRole) => (
           <RoleSelector
-            key={`blue-${role}`}
-            side="Blue"
-            role={role}
-            champions={champions}
-            onChange={(r, c) => handleChange(r, c, "Blue")}
-            selectedChamps={[...Object.values(blueTeam), ...Object.values(redTeam)]}
-          />
+          key={`blue-${uiRole}`}
+          side="Blue"
+          role={uiRole}
+          champions={championsByRole[roleMap[uiRole]] || []}
+          onChange={(r, c) => handleChange(r, c, "Blue")}
+          selectedChampion={blueTeam[roleMap[uiRole]]}
+          selectedChamps={selectedChamps}
+        />
         ))}
       </div>
 
@@ -136,14 +131,15 @@ export default function LolPredictionForm() {
 
       <div>
         <h2 className="text-xl font-semibold mb-4">Time Vermelho</h2>
-        {roles.map((role) => (
+        {roles.map((uiRole) => (
           <RoleSelector
-            key={`red-${role}`}
+            key={`red-${uiRole}`}
             side="Red"
-            role={role}
-            champions={champions}
+            role={uiRole}
+            champions={championsByRole[roleMap[uiRole]] || []}
             onChange={(r, c) => handleChange(r, c, "Red")}
-            selectedChamps={[...Object.values(blueTeam), ...Object.values(redTeam)]}
+            selectedChampion={redTeam[roleMap[uiRole]]}
+            selectedChamps={selectedChamps}
           />
         ))}
       </div>
